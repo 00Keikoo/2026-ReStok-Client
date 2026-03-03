@@ -2,6 +2,7 @@
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
 
 // Cek user sudah login
 const PrivateRoute = ({ children }) => {
@@ -15,7 +16,7 @@ const App = () => {
       <Routes>
         <Route path="/login" element={<Login />}/>
         <Route path='/dashboard' element={
-          <h1>Dashboard (Coming soon)</h1>
+          <Dashboard />
         }/>
         {/* Redirect ke login kalau akses root */}
         <Route path='/' element={<Navigate to="/login" />}/>
