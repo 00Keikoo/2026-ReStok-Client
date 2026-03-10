@@ -4,15 +4,14 @@ import api from '../services/api'
 
 const BASE_URL = 'http://localhost:3000'
 
-// Inject CSS responsive ke dalam halaman
 const cssString = `
-    html, body, #root {
-        width: 100%;
-        min-height: 100vh;
-        margin: 0;
-        padding: 0;
-    }
-  
+  html, body, #root {
+    width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+  }
+
   * { box-sizing: border-box; }
 
   .dashboard-container { min-height: 100vh; background-color: #f0f2f5; }
@@ -58,7 +57,6 @@ const cssString = `
     color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;
   }
 
-  /* Card Grid */
   .card-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -86,14 +84,12 @@ const cssString = `
   .card-price { font-weight: bold; color: #1890ff; font-size: 0.95rem; margin: 0.4rem 0 0; }
   .card-media-count { font-size: 0.75rem; color: #aaa; margin-top: 0.2rem; }
 
-  /* Modal */
   .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background-color: rgba(0,0,0,0.6); display: flex;
     justify-content: center; align-items: center; z-index: 1000; padding: 1rem;
   }
 
-  /* Detail Modal */
   .detail-modal {
     background: white; border-radius: 16px; width: 100%;
     max-width: 560px; max-height: 90vh; overflow-y: auto; position: relative;
@@ -146,10 +142,13 @@ const cssString = `
   .detail-value { font-weight: 500; color: #222; font-size: 0.9rem; }
   .status-btn {
     width: 100%; padding: 0.75rem; color: white; border: none;
-    border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.95rem; margin-top: 1.2rem;
+    border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.95rem; margin-top: 1rem;
   }
+  .action-row {
+    display: flex; gap: 0.8rem; margin-top: 0.8rem;
+  }
+  .action-row .status-btn { margin-top: 0; }
 
-  /* Add Modal */
   .add-modal {
     background: white; border-radius: 16px; width: 100%;
     max-width: 620px; max-height: 90vh; overflow-y: auto; padding: 1.5rem;
@@ -179,8 +178,6 @@ const cssString = `
     flex: 1; padding: 0.7rem; background-color: #1890ff;
     color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;
   }
-
-  /* Preview */
   .preview-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
   .preview-item { position: relative; width: 75px; height: 75px; border-radius: 6px; overflow: hidden; }
   .preview-item img, .preview-item video { width: 100%; height: 100%; object-fit: cover; }
@@ -192,7 +189,21 @@ const cssString = `
   }
   .preview-type { position: absolute; bottom: 2px; left: 3px; font-size: 0.75rem; }
 
-  /* Responsive */
+  /* Confirm Dialog */
+  .confirm-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); display: flex;
+    justify-content: center; align-items: center; z-index: 2000;
+  }
+  .confirm-box {
+    background: white; border-radius: 12px; padding: 2rem;
+    width: 100%; max-width: 380px; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .confirm-box h3 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+  .confirm-box p { color: #666; font-size: 0.9rem; margin: 0 0 1.5rem; }
+  .confirm-actions { display: flex; gap: 0.8rem; }
+
   @media (max-width: 768px) {
     .navbar { padding: 0.8rem 1rem; }
     .navbar h2 { font-size: 1rem; }
@@ -206,6 +217,7 @@ const cssString = `
     .form-grid { grid-template-columns: 1fr; }
     .detail-grid { grid-template-columns: 1fr; }
     .slideshow { height: 200px; }
+    .action-row { flex-direction: column; }
   }
 
   @media (max-width: 480px) {
@@ -217,11 +229,25 @@ const cssString = `
   }
 `
 
-// Inject style ke DOM
 if (typeof document !== 'undefined') {
     const styleEl = document.createElement('style')
     styleEl.innerHTML = cssString
     document.head.appendChild(styleEl)
+}
+
+const FORM_FIELDS = [
+    { name: 'brand', label: 'Brand *', placeholder: 'Toyota' },
+    { name: 'model', label: 'Model *', placeholder: 'Avanza' },
+    { name: 'type', label: 'Type *', placeholder: 'MPV' },
+    { name: 'year', label: 'Tahun *', placeholder: '2024', type: 'number' },
+    { name: 'color', label: 'Warna *', placeholder: 'Putih' },
+    { name: 'price', label: 'Harga *', placeholder: '250000000', type: 'number' },
+    { name: 'plateNumber', label: 'Nomor Plat', placeholder: 'B 1234 ABC' },
+]
+
+const EMPTY_FORM = {
+    brand: '', model: '', type: '', transmisi: '',
+    year: '', color: '', price: '', plateNumber: '', description: ''
 }
 
 const Dashboard = () => {
@@ -229,16 +255,27 @@ const Dashboard = () => {
     const [summary, setSummary] = useState({ total: 0, ready: 0, sold: 0 })
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('')
+
+    // Modal tambah
     const [showAddModal, setShowAddModal] = useState(false)
-    const [formData, setFormData] = useState({
-        brand: '', model: '', type: '', transmisi: '',
-        year: '', color: '', price: '', plateNumber: '', description: ''
-    })
+    const [addForm, setAddForm] = useState(EMPTY_FORM)
     const [mediaFiles, setMediaFiles] = useState([])
-    const [formLoading, setFormLoading] = useState(false)
-    const [formError, setFormError] = useState('')
+    const [addLoading, setAddLoading] = useState(false)
+    const [addError, setAddError] = useState('')
+
+    // Modal detail + slideshow
     const [selectedCar, setSelectedCar] = useState(null)
     const [slideIndex, setSlideIndex] = useState(0)
+
+    // Modal edit
+    const [showEditModal, setShowEditModal] = useState(false)
+    const [editForm, setEditForm] = useState(EMPTY_FORM)
+    const [editLoading, setEditLoading] = useState(false)
+    const [editError, setEditError] = useState('')
+
+    // Confirm hapus
+    const [showConfirm, setShowConfirm] = useState(false)
+    const [deleteLoading, setDeleteLoading] = useState(false)
 
     const user = JSON.parse(localStorage.getItem('user'))
 
@@ -264,6 +301,7 @@ const Dashboard = () => {
         window.location.href = '/login'
     }
 
+    // ── Status ──────────────────────────────────────
     const handleStatusChange = async (id, statusBaru) => {
         try {
             await api.patch(`/cars/${id}/status`, { status: statusBaru })
@@ -272,33 +310,108 @@ const Dashboard = () => {
         } catch { alert('Gagal update status!') }
     }
 
-    const handleTambahMobil = async (e) => {
+    // ── Tambah ──────────────────────────────────────
+    const handleTambah = async (e) => {
         e.preventDefault()
-        setFormLoading(true)
-        setFormError('')
+        setAddLoading(true)
+        setAddError('')
         try {
             const data = new FormData()
-            Object.keys(formData).forEach(k => data.append(k, formData[k]))
+            Object.keys(addForm).forEach(k => data.append(k, addForm[k]))
             mediaFiles.forEach(f => data.append('media', f))
             await api.post('/cars', data, { headers: { 'Content-Type': 'multipart/form-data' } })
-            setFormData({ brand: '', model: '', type: '', transmisi: '', year: '', color: '', price: '', plateNumber: '', description: '' })
+            setAddForm(EMPTY_FORM)
             setMediaFiles([])
             setShowAddModal(false)
             fetchCars()
         } catch (err) {
-            setFormError(err.response?.data?.message || 'Gagal tambah mobil')
-        } finally { setFormLoading(false) }
+            setAddError(err.response?.data?.message || 'Gagal tambah mobil')
+        } finally { setAddLoading(false) }
     }
 
-    const handleFormChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value })
-    const handleMediaChange = (e) => setMediaFiles(p => [...p, ...Array.from(e.target.files)])
-    const removeMedia = (i) => setMediaFiles(p => p.filter((_, idx) => idx !== i))
+    // ── Edit ─────────────────────────────────────────
+    const handleOpenEdit = () => {
+        setEditForm({
+            brand: selectedCar.brand,
+            model: selectedCar.model,
+            type: selectedCar.type,
+            transmisi: selectedCar.transmisi,
+            year: selectedCar.year,
+            color: selectedCar.color,
+            price: selectedCar.price,
+            plateNumber: selectedCar.plateNumber || '',
+            description: selectedCar.description || ''
+        })
+        setEditError('')
+        setShowEditModal(true)
+    }
+
+    const handleEdit = async (e) => {
+        e.preventDefault()
+        setEditLoading(true)
+        setEditError('')
+        try {
+            const res = await api.put(`/cars/${selectedCar.id}`, {
+                ...editForm,
+                year: parseInt(editForm.year),
+                price: parseFloat(editForm.price)
+            })
+            setSelectedCar(prev => ({ ...prev, ...res.data.data }))
+            setShowEditModal(false)
+            fetchCars()
+        } catch (err) {
+            setEditError(err.response?.data?.message || 'Gagal update mobil')
+        } finally { setEditLoading(false) }
+    }
+
+    // ── Hapus ────────────────────────────────────────
+    const handleDelete = async () => {
+        setDeleteLoading(true)
+        try {
+            await api.delete(`/cars/${selectedCar.id}`)
+            setShowConfirm(false)
+            closeDetail()
+            fetchCars()
+        } catch {
+            alert('Gagal hapus mobil!')
+        } finally { setDeleteLoading(false) }
+    }
+
+    // ── Helpers ──────────────────────────────────────
     const openDetail = (car) => { setSelectedCar(car); setSlideIndex(0) }
     const closeDetail = () => { setSelectedCar(null); setSlideIndex(0) }
     const prevSlide = () => setSlideIndex(p => p === 0 ? selectedCar.media.length - 1 : p - 1)
     const nextSlide = () => setSlideIndex(p => p === selectedCar.media.length - 1 ? 0 : p + 1)
 
     const filterColors = { '': '#1890ff', 'READY': '#52c41a', 'SOLD': '#ff4d4f' }
+
+    const CarFormFields = ({ formData, onChange }) => (
+        <>
+            <div className="form-grid">
+                {FORM_FIELDS.map(f => (
+                    <div key={f.name} className="input-group">
+                        <label>{f.label}</label>
+                        <input name={f.name} value={formData[f.name]} onChange={onChange}
+                            placeholder={f.placeholder} type={f.type || 'text'}
+                            required={f.label.includes('*')} />
+                    </div>
+                ))}
+                <div className="input-group">
+                    <label>Transmisi *</label>
+                    <select name="transmisi" value={formData.transmisi} onChange={onChange} required>
+                        <option value="">Pilih transmisi</option>
+                        <option value="Manual">Manual</option>
+                        <option value="Automatic">Automatic</option>
+                    </select>
+                </div>
+            </div>
+            <div className="input-group">
+                <label>Deskripsi</label>
+                <textarea name="description" value={formData.description}
+                    onChange={onChange} placeholder="Deskripsi tambahan..." />
+            </div>
+        </>
+    )
 
     return (
         <div className="dashboard-container">
@@ -384,7 +497,7 @@ const Dashboard = () => {
                 )}
             </div>
 
-            {/* Modal Detail */}
+            {/* ── Modal Detail ─────────────────────────── */}
             {selectedCar && (
                 <div className="modal-overlay" onClick={closeDetail}>
                     <div className="detail-modal" onClick={e => e.stopPropagation()}>
@@ -456,72 +569,104 @@ const Dashboard = () => {
                                 </div>
                             )}
 
+                            {/* Tombol Admin */}
                             {user?.role === 'ADMIN' && (
-                                selectedCar.status === 'READY' ? (
-                                    <button className="status-btn" style={{ backgroundColor: '#ff4d4f' }}
-                                        onClick={() => handleStatusChange(selectedCar.id, 'SOLD')}>
-                                        🔴 Mark as SOLD
-                                    </button>
-                                ) : (
-                                    <button className="status-btn" style={{ backgroundColor: '#52c41a' }}
-                                        onClick={() => handleStatusChange(selectedCar.id, 'READY')}>
-                                        🟢 Mark as READY
-                                    </button>
-                                )
+                                <>
+                                    {selectedCar.status === 'READY' ? (
+                                        <button className="status-btn" style={{ backgroundColor: '#ff4d4f' }}
+                                            onClick={() => handleStatusChange(selectedCar.id, 'SOLD')}>
+                                            🔴 Mark as SOLD
+                                        </button>
+                                    ) : (
+                                        <button className="status-btn" style={{ backgroundColor: '#52c41a' }}
+                                            onClick={() => handleStatusChange(selectedCar.id, 'READY')}>
+                                            🟢 Mark as READY
+                                        </button>
+                                    )}
+
+                                    <div className="action-row">
+                                        <button className="status-btn" style={{ backgroundColor: '#1890ff', marginTop: 0 }}
+                                            onClick={handleOpenEdit}>
+                                            ✏️ Edit Data
+                                        </button>
+                                        <button className="status-btn" style={{ backgroundColor: '#ff4d4f', marginTop: 0 }}
+                                            onClick={() => setShowConfirm(true)}>
+                                            🗑️ Hapus
+                                        </button>
+                                    </div>
+                                </>
                             )}
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Modal Tambah */}
+            {/* ── Confirm Hapus ────────────────────────── */}
+            {showConfirm && (
+                <div className="confirm-overlay">
+                    <div className="confirm-box">
+                        <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🗑️</div>
+                        <h3>Hapus Mobil?</h3>
+                        <p>
+                            <strong>{selectedCar?.brand} {selectedCar?.model}</strong> akan dihapus permanen
+                            beserta semua foto & videonya. Aksi ini tidak bisa dibatalkan!
+                        </p>
+                        <div className="confirm-actions">
+                            <button className="btn-cancel" onClick={() => setShowConfirm(false)}
+                                disabled={deleteLoading}>
+                                Batal
+                            </button>
+                            <button onClick={handleDelete} disabled={deleteLoading}
+                                style={{ flex: 1, padding: '0.7rem', backgroundColor: '#ff4d4f', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                                {deleteLoading ? 'Menghapus...' : 'Ya, Hapus!'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Modal Edit ───────────────────────────── */}
+            {showEditModal && (
+                <div className="modal-overlay">
+                    <div className="add-modal">
+                        <div className="add-modal-header">
+                            <h3 style={{ margin: 0 }}>✏️ Edit — {selectedCar?.brand} {selectedCar?.model}</h3>
+                            <button className="close-btn-inline" onClick={() => setShowEditModal(false)}>✕</button>
+                        </div>
+
+                        {editError && <p style={{ color: 'red', marginBottom: '1rem' }}>{editError}</p>}
+
+                        <form onSubmit={handleEdit}>
+                            <CarFormFields formData={editForm} onChange={e => setEditForm({ ...editForm, [e.target.name]: e.target.value })} />
+                            <div className="form-actions">
+                                <button type="button" className="btn-cancel" onClick={() => setShowEditModal(false)}>Batal</button>
+                                <button type="submit" className="btn-submit" disabled={editLoading}>
+                                    {editLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Modal Tambah ─────────────────────────── */}
             {showAddModal && (
                 <div className="modal-overlay">
                     <div className="add-modal">
                         <div className="add-modal-header">
-                            <h3 style={{ margin: 0 }}>Tambah Mobil Baru</h3>
+                            <h3 style={{ margin: 0 }}>🚗 Tambah Mobil Baru</h3>
                             <button className="close-btn-inline" onClick={() => setShowAddModal(false)}>✕</button>
                         </div>
 
-                        {formError && <p style={{ color: 'red', marginBottom: '1rem' }}>{formError}</p>}
+                        {addError && <p style={{ color: 'red', marginBottom: '1rem' }}>{addError}</p>}
 
-                        <form onSubmit={handleTambahMobil}>
-                            <div className="form-grid">
-                                {[
-                                    { name: 'brand', label: 'Brand *', placeholder: 'Toyota' },
-                                    { name: 'model', label: 'Model *', placeholder: 'Avanza' },
-                                    { name: 'type', label: 'Type *', placeholder: 'MPV' },
-                                    { name: 'year', label: 'Tahun *', placeholder: '2024', type: 'number' },
-                                    { name: 'color', label: 'Warna *', placeholder: 'Putih' },
-                                    { name: 'price', label: 'Harga *', placeholder: '250000000', type: 'number' },
-                                    { name: 'plateNumber', label: 'Nomor Plat', placeholder: 'B 1234 ABC' },
-                                ].map(f => (
-                                    <div key={f.name} className="input-group">
-                                        <label>{f.label}</label>
-                                        <input name={f.name} value={formData[f.name]} onChange={handleFormChange}
-                                            placeholder={f.placeholder} type={f.type || 'text'}
-                                            required={f.label.includes('*')} />
-                                    </div>
-                                ))}
-                                <div className="input-group">
-                                    <label>Transmisi *</label>
-                                    <select name="transmisi" value={formData.transmisi} onChange={handleFormChange} required>
-                                        <option value="">Pilih transmisi</option>
-                                        <option value="Manual">Manual</option>
-                                        <option value="Automatic">Automatic</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="input-group">
-                                <label>Deskripsi</label>
-                                <textarea name="description" value={formData.description}
-                                    onChange={handleFormChange} placeholder="Deskripsi tambahan..." />
-                            </div>
+                        <form onSubmit={handleTambah}>
+                            <CarFormFields formData={addForm} onChange={e => setAddForm({ ...addForm, [e.target.name]: e.target.value })} />
 
                             <div className="input-group">
                                 <label>Foto & Video (bisa lebih dari 1)</label>
-                                <input type="file" accept="image/*,video/*" multiple onChange={handleMediaChange} />
+                                <input type="file" accept="image/*,video/*" multiple
+                                    onChange={e => setMediaFiles(p => [...p, ...Array.from(e.target.files)])} />
                                 {mediaFiles.length > 0 && (
                                     <div className="preview-grid">
                                         {mediaFiles.map((file, i) => (
@@ -530,7 +675,8 @@ const Dashboard = () => {
                                                     ? <video src={URL.createObjectURL(file)} />
                                                     : <img src={URL.createObjectURL(file)} alt="" />
                                                 }
-                                                <button type="button" className="preview-remove" onClick={() => removeMedia(i)}>✕</button>
+                                                <button type="button" className="preview-remove"
+                                                    onClick={() => setMediaFiles(p => p.filter((_, idx) => idx !== i))}>✕</button>
                                                 <span className="preview-type">{file.type.startsWith('video') ? '🎥' : '📷'}</span>
                                             </div>
                                         ))}
@@ -540,8 +686,8 @@ const Dashboard = () => {
 
                             <div className="form-actions">
                                 <button type="button" className="btn-cancel" onClick={() => setShowAddModal(false)}>Batal</button>
-                                <button type="submit" className="btn-submit" disabled={formLoading}>
-                                    {formLoading ? 'Menyimpan...' : 'Simpan Mobil'}
+                                <button type="submit" className="btn-submit" disabled={addLoading}>
+                                    {addLoading ? 'Menyimpan...' : 'Simpan Mobil'}
                                 </button>
                             </div>
                         </form>
