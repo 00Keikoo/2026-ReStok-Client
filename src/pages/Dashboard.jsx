@@ -250,11 +250,40 @@ const EMPTY_FORM = {
     year: '', color: '', price: '', plateNumber: '', description: ''
 }
 
+const CarFormFields = ({ formData, onChange }) => (
+    <>
+        <div className="form-grid">
+            {FORM_FIELDS.map(f => (
+                <div key={f.name} className="input-group">
+                    <label>{f.label}</label>
+                    <input name={f.name} value={formData[f.name]} onChange={onChange}
+                        placeholder={f.placeholder} type={f.type || 'text'}
+                        required={f.label.includes('*')} />
+                </div>
+            ))}
+            <div className="input-group">
+                <label>Transmisi *</label>
+                <select name="transmisi" value={formData.transmisi} onChange={onChange} required>
+                    <option value="">Pilih transmisi</option>
+                    <option value="Manual">Manual</option>
+                    <option value="Automatic">Automatic</option>
+                </select>
+            </div>
+        </div>
+        <div className="input-group">
+            <label>Deskripsi</label>
+            <textarea name="description" value={formData.description}
+                onChange={onChange} placeholder="Deskripsi tambahan..." />
+        </div>
+    </>
+)
+
 const Dashboard = () => {
     const [cars, setCars] = useState([])
     const [summary, setSummary] = useState({ total: 0, ready: 0, sold: 0 })
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('')
+    const [search, setSearch] = useState('')
 
     // Modal tambah
     const [showAddModal, setShowAddModal] = useState(false)
@@ -272,6 +301,8 @@ const Dashboard = () => {
     const [editForm, setEditForm] = useState(EMPTY_FORM)
     const [editLoading, setEditLoading] = useState(false)
     const [editError, setEditError] = useState('')
+    const [editMediaFiles, setEditMediaFiles] = useState([])
+    const [editMediaLoading, setEditMediaLoading] = useState(false)
 
     // Confirm hapus
     const [showConfirm, setShowConfirm] = useState(false)
@@ -319,7 +350,12 @@ const Dashboard = () => {
             const data = new FormData()
             Object.keys(addForm).forEach(k => data.append(k, addForm[k]))
             mediaFiles.forEach(f => data.append('media', f))
-            await api.post('/cars', data, { headers: { 'Content-Type': 'multipart/form-data' } })
+            console.log('Isi form data: ')
+            for (let [key, val] of data.entries()) {
+                console.log(key, '=', val)
+            }
+            await api.post('/cars', data)
+
             setAddForm(EMPTY_FORM)
             setMediaFiles([])
             setShowAddModal(false)
@@ -364,6 +400,40 @@ const Dashboard = () => {
         } finally { setEditLoading(false) }
     }
 
+    const handleDeleteMedia = async (mediaId) => {
+        try {
+            await api.delete(`/cars/${selectedCar.id}/media/${mediaId}`)
+            // Update selectedCar - hapus media yang sudah dihapus
+            setSelectedCar(prev => ({
+                ...prev,
+                media: prev.media.filter(m => m.id !== mediaId)
+            }))
+            fetchCars()
+        } catch {
+            alert('Gagal hapus media!')
+        }
+    }
+
+    const handleAddMedia = async () => {
+        if (editMediaFiles.length === 0) return
+        setEditMediaLoading(true)
+        try {
+            const data = new FormData()
+            editMediaFiles.forEach(f => data.append('media', f))
+            const res = await api.post(`/cars/${selectedCar.id}/media`, data)
+            setSelectedCar(prev => ({
+                ...prev,
+                media: res.data.data.media
+            }))
+            setEditMediaFiles([])
+            fetchCars()
+        } catch {
+            alert('Gagal  upload media!')
+        } finally {
+            setEditMediaLoading(false)
+        }
+    }
+
     // ── Hapus ────────────────────────────────────────
     const handleDelete = async () => {
         setDeleteLoading(true)
@@ -385,33 +455,16 @@ const Dashboard = () => {
 
     const filterColors = { '': '#1890ff', 'READY': '#52c41a', 'SOLD': '#ff4d4f' }
 
-    const CarFormFields = ({ formData, onChange }) => (
-        <>
-            <div className="form-grid">
-                {FORM_FIELDS.map(f => (
-                    <div key={f.name} className="input-group">
-                        <label>{f.label}</label>
-                        <input name={f.name} value={formData[f.name]} onChange={onChange}
-                            placeholder={f.placeholder} type={f.type || 'text'}
-                            required={f.label.includes('*')} />
-                    </div>
-                ))}
-                <div className="input-group">
-                    <label>Transmisi *</label>
-                    <select name="transmisi" value={formData.transmisi} onChange={onChange} required>
-                        <option value="">Pilih transmisi</option>
-                        <option value="Manual">Manual</option>
-                        <option value="Automatic">Automatic</option>
-                    </select>
-                </div>
-            </div>
-            <div className="input-group">
-                <label>Deskripsi</label>
-                <textarea name="description" value={formData.description}
-                    onChange={onChange} placeholder="Deskripsi tambahan..." />
-            </div>
-        </>
-    )
+    const filteredCars = cars.filter(car => {
+        const q = search.toLowerCase()
+        return (
+            car.brand.toLowerCase().includes(q) ||
+            car.model.toLowerCase().includes(q) ||
+            car.type.toLowerCase().includes(q) ||
+            car.color.toLowerCase().includes(q) ||
+            (car.plateNumber && car.plateNumber.toLowerCase().includes(q))
+        )
+    })
 
     return (
         <div className="dashboard-container">
@@ -453,6 +506,23 @@ const Dashboard = () => {
                             </button>
                         ))}
                     </div>
+
+                    {/* Search */}
+                    <input
+                        type="text"
+                        placeholder="🔍 Cari brand, model, warna..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        style={{
+                            padding: '0.4rem 1rem',
+                            border: '1px solid #d9d9d9',
+                            borderRadius: '20px',
+                            fontSize: '0.85rem',
+                            outline: 'none',
+                            width: '240px'
+                        }}
+                    />
+
                     {user?.role === 'ADMIN' && (
                         <button className="add-btn" onClick={() => setShowAddModal(true)}>+ Tambah Mobil</button>
                     )}
@@ -461,11 +531,13 @@ const Dashboard = () => {
                 {/* Cards */}
                 {loading ? (
                     <p style={{ textAlign: 'center', color: '#888', padding: '3rem' }}>Loading...</p>
-                ) : cars.length === 0 ? (
-                    <p style={{ textAlign: 'center', color: '#888', padding: '3rem' }}>Tidak ada data mobil</p>
+                ) : filteredCars.length === 0 ? (
+                    <p style={{ textAlign: 'center', color: '#888', padding: '3rem' }}>
+                        {search ? `Tidak ada mobil dengan kata kunci "${search}"` : 'Tidak ada data mobil'}
+                    </p>
                 ) : (
                     <div className="card-grid">
-                        {cars.map(car => {
+                        {filteredCars.map(car => {
                             const firstImg = car.media?.find(m => m.type === 'image')
                             return (
                                 <div key={car.id} className="car-card" onClick={() => openDetail(car)}>
@@ -625,7 +697,7 @@ const Dashboard = () => {
                 </div>
             )}
 
-            {/* ── Modal Edit ───────────────────────────── */}
+            {/* Modal Edit */}
             {showEditModal && (
                 <div className="modal-overlay">
                     <div className="add-modal">
@@ -636,8 +708,12 @@ const Dashboard = () => {
 
                         {editError && <p style={{ color: 'red', marginBottom: '1rem' }}>{editError}</p>}
 
+                        {/* Form data mobil */}
                         <form onSubmit={handleEdit}>
-                            <CarFormFields formData={editForm} onChange={e => setEditForm({ ...editForm, [e.target.name]: e.target.value })} />
+                            <CarFormFields
+                                formData={editForm}
+                                onChange={e => setEditForm({ ...editForm, [e.target.name]: e.target.value })}
+                            />
                             <div className="form-actions">
                                 <button type="button" className="btn-cancel" onClick={() => setShowEditModal(false)}>Batal</button>
                                 <button type="submit" className="btn-submit" disabled={editLoading}>
@@ -645,6 +721,67 @@ const Dashboard = () => {
                                 </button>
                             </div>
                         </form>
+
+                        {/* Divider */}
+                        <hr style={{ margin: '1.5rem 0', border: 'none', borderTop: '1px solid #f0f0f0' }} />
+
+                        {/* Foto & video existing */}
+                        <div>
+                            <p style={{ fontWeight: '600', marginBottom: '0.8rem' }}>
+                                📁 Foto & Video ({selectedCar?.media?.length || 0})
+                            </p>
+                            {selectedCar?.media?.length > 0 ? (
+                                <div className="preview-grid">
+                                    {selectedCar.media.map(m => (
+                                        <div key={m.id} className="preview-item">
+                                            {m.type === 'video'
+                                                ? <video src={`${BASE_URL}${m.url}`} />
+                                                : <img src={`${BASE_URL}${m.url}`} alt="" />
+                                            }
+                                            <button type="button" className="preview-remove"
+                                                onClick={() => handleDeleteMedia(m.id)}>✕</button>
+                                            <span className="preview-type">{m.type === 'video' ? '🎥' : '📷'}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p style={{ color: '#aaa', fontSize: '0.85rem' }}>Belum ada foto/video</p>
+                            )}
+                        </div>
+
+                        {/* Upload foto/video baru */}
+                        <div style={{ marginTop: '1rem' }}>
+                            <p style={{ fontWeight: '600', marginBottom: '0.5rem' }}>➕ Tambah Foto/Video</p>
+                            <input type="file" accept="image/*,video/*" multiple
+                                onChange={e => setEditMediaFiles(p => [...p, ...Array.from(e.target.files)])} />
+
+                            {editMediaFiles.length > 0 && (
+                                <>
+                                    <div className="preview-grid" style={{ marginTop: '0.5rem' }}>
+                                        {editMediaFiles.map((file, i) => (
+                                            <div key={i} className="preview-item">
+                                                {file.type.startsWith('video')
+                                                    ? <video src={URL.createObjectURL(file)} />
+                                                    : <img src={URL.createObjectURL(file)} alt="" />
+                                                }
+                                                <button type="button" className="preview-remove"
+                                                    onClick={() => setEditMediaFiles(p => p.filter((_, idx) => idx !== i))}>✕</button>
+                                                <span className="preview-type">{file.type.startsWith('video') ? '🎥' : '📷'}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button onClick={handleAddMedia} disabled={editMediaLoading}
+                                        style={{
+                                            marginTop: '0.8rem', padding: '0.6rem 1.2rem',
+                                            backgroundColor: '#52c41a', color: 'white',
+                                            border: 'none', borderRadius: '6px',
+                                            cursor: 'pointer', fontWeight: 'bold'
+                                        }}>
+                                        {editMediaLoading ? 'Mengupload...' : `⬆️ Upload ${editMediaFiles.length} file`}
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
