@@ -472,10 +472,16 @@ const Dashboard = () => {
             <div className="navbar">
                 <h2>🚗 Showroom</h2>
                 {user?.role === 'ADMIN' && (
-                    <button onClick={() => window.location.href = '/users'}
-                    style={{ padding: '0.4rem 0.8rem', backgroundColor: '#722ed1', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
-                        👥 Users
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button onClick={() => window.location.href = '/users'}
+                            style={{ padding: '0.4rem 0.8rem', backgroundColor: '#722ed1', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                            👥 Users
+                        </button>
+                        <button onClick={() => window.open('/catalog', '_blank')}
+                            style={{ padding: '0.4rem 0.8rem', backgroundColor: '#52c41a', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                            🌐 Lihat Catalog
+                        </button>
+                    </div>
                 )}
                 <div className="navbar-right">
                     <span className="user-info">Halo, <strong>{user?.name}</strong> ({user?.role})</span>

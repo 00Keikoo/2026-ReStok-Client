@@ -50,7 +50,8 @@ const Users = () => {
         } catch (err) {
             setFormError(err.response?.data?.message || 'Gagal tambah user')
         } finally {
-            setFormLoading(false) }
+            setFormLoading(false)
+        }
     }
 
     const handleDelete = async () => {
@@ -75,7 +76,10 @@ const Users = () => {
             <div style={styles.navbar}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <button onClick={() => navigate('/dashboard')} style={styles.backBtn}>← Dashboard</button>
-                    <h2 style={{ margin: 0 }}>👥 Manajemen User</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                        <img src="/logo.jpg" alt="ZafkaCars" style={{ height: '36px', borderRadius: '6px' }} />
+                        <h2 style={{ margin: 0 }}>👥 Manajemen User</h2>
+                    </div>
                 </div>
                 <span style={{ color: '#555', fontSize: '0.9rem' }}>
                     Login sebagai <strong>{currentUser?.name}</strong>
