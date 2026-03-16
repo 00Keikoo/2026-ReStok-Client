@@ -471,6 +471,12 @@ const Dashboard = () => {
             {/* Navbar */}
             <div className="navbar">
                 <h2>🚗 Showroom</h2>
+                {user?.role === 'ADMIN' && (
+                    <button onClick={() => window.location.href = '/users'}
+                    style={{ padding: '0.4rem 0.8rem', backgroundColor: '#722ed1', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                        👥 Users
+                    </button>
+                )}
                 <div className="navbar-right">
                     <span className="user-info">Halo, <strong>{user?.name}</strong> ({user?.role})</span>
                     <button onClick={handleLogout} className="logout-btn">Logout</button>
