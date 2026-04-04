@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
 
-const BASE_URL = 'http://localhost:3000'
+const BASE_URL = 'https://restock-back-production.up.railway.app'
 
 const cssString = `
   html, body, #root {

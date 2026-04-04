@@ -4,7 +4,7 @@ import axios from 'axios'
 
 //Base url backend
 const api = axios.create({
-    baseURL: 'http://localhost:3000/api'
+    baseURL: 'https://restock-back-production.up.railway.app/api'
 })
 
 // interceptor - otomatis sisipkan token di setiap request

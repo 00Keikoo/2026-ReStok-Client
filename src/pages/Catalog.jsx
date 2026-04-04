@@ -2,16 +2,14 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../services/api'
 
-const BASE_URL = 'http://localhost:3000'
-const WS_URL = 'ws://localhost:3000'
+const BASE_URL = 'https://restock-back-production.up.railway.app'
+const WS_URL = 'wss://restock-back-production.up.railway.app'
 const NOMOR_WA = '62895384677026'
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500&display=swap');
 
-  html, body, #root {
-    width: 100%; min-height: 100vh; margin: 0; padding: 0;
-  }
+  html, body, #root { width: 100%; min-height: 100vh; margin: 0; padding: 0; }
   * { box-sizing: border-box; }
 
   :root {
@@ -34,14 +32,6 @@ const css = `
 
   .cat { min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; }
 
-  /* Noise texture overlay */
-  .cat::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-    pointer-events: none; z-index: 0; opacity: 0.4;
-  }
-
   /* Navbar */
   .cat-nav {
     position: sticky; top: 0; z-index: 100;
@@ -53,12 +43,11 @@ const css = `
     height: 80px;
   }
   .cat-nav-brand { display: flex; align-items: center; gap: 0.75rem; }
-  .cat-nav-brand img { height: 38px; border-radius: 8px; }
+  .cat-nav-brand img { height: 52px; border-radius: 8px; }
   .cat-nav-brand span {
     font-family: 'Playfair Display', serif;
     font-size: 1.3rem; color: var(--gold2); letter-spacing: 0.02em;
   }
-  .cat-nav-right { display: flex; align-items: center; gap: 1.2rem; }
   .ws-pill {
     display: flex; align-items: center; gap: 0.4rem;
     background: rgba(255,255,255,0.05); border: 1px solid var(--border);
@@ -70,7 +59,7 @@ const css = `
   .ws-dot.off { background: var(--red); }
   @keyframes glow { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
 
-  /* Hero strip */
+  /* Hero */
   .cat-hero {
     background: linear-gradient(135deg, #0d0d18 0%, #141428 50%, #0d0d18 100%);
     border-bottom: 1px solid var(--border);
@@ -86,24 +75,19 @@ const css = `
   }
   .cat-hero h2 {
     font-family: 'Playfair Display', serif;
-    font-size: clamp(1.8rem, 4vw, 3rem);
-    font-weight: 700; margin: 0 0 0.5rem;
+    font-size: clamp(1.8rem, 4vw, 3rem); font-weight: 700; margin: 0 0 0.5rem;
     background: linear-gradient(135deg, var(--gold), var(--gold2), #fff);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    background-clip: text;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   }
   .cat-hero p { color: var(--text2); font-size: 1rem; margin: 0; font-weight: 300; letter-spacing: 0.05em; }
-
-  /* Stats bar */
   .cat-stats {
-    display: flex; justify-content: center; gap: 0; margin-top: 2rem;
+    display: flex; justify-content: center;
     border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
     max-width: 400px; margin: 2rem auto 0;
   }
   .cat-stat {
     flex: 1; padding: 0.8rem 1.2rem; text-align: center;
-    border-right: 1px solid var(--border);
-    background: rgba(255,255,255,0.02);
+    border-right: 1px solid var(--border); background: rgba(255,255,255,0.02);
   }
   .cat-stat:last-child { border-right: none; }
   .cat-stat-val { font-size: 1.6rem; font-weight: 700; font-family: 'Playfair Display', serif; }
@@ -111,15 +95,13 @@ const css = `
 
   /* Toolbar */
   .cat-toolbar {
-    padding: 1.5rem 2rem;
-    display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 1rem;
+    padding: 1.2rem 2rem;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 0.7rem;
     border-bottom: 1px solid var(--border);
   }
   .cat-filters { display: flex; gap: 0.5rem; flex-wrap: wrap; }
   .cat-filter-btn {
-    padding: 0.45rem 1.1rem;
-    border-radius: 20px; border: 1px solid var(--border);
+    padding: 0.45rem 1.1rem; border-radius: 20px; border: 1px solid var(--border);
     background: transparent; color: var(--text2);
     font-family: 'DM Sans', sans-serif; font-size: 0.82rem;
     cursor: pointer; transition: all 0.2s; letter-spacing: 0.03em;
@@ -129,24 +111,29 @@ const css = `
   .cat-filter-btn.active-ready { background: var(--green); border-color: var(--green); color: #000; font-weight: 600; }
   .cat-filter-btn.active-sold { background: rgba(231,76,60,0.2); border-color: var(--red); color: var(--red); font-weight: 600; }
 
-  .cat-search-wrap { position: relative; }
+  .cat-budget-select {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 20px; padding: 0.45rem 1rem;
+    color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 0.82rem;
+    outline: none; cursor: pointer; transition: border-color 0.2s;
+  }
+  .cat-budget-select:focus { border-color: var(--gold); }
+  .cat-budget-select.active { border-color: var(--gold); color: var(--gold2); }
+
+  .cat-search-wrap { position: relative; margin-left: auto; }
   .cat-search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); opacity: 0.4; }
   .cat-search {
     background: var(--bg3); border: 1px solid var(--border);
     border-radius: 24px; padding: 0.5rem 1rem 0.5rem 2.4rem;
     color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
-    outline: none; width: 240px; transition: border-color 0.2s;
+    outline: none; width: 220px; transition: border-color 0.2s;
   }
   .cat-search::placeholder { color: var(--text3); }
   .cat-search:focus { border-color: var(--gold); }
 
   /* Grid */
   .cat-content { padding: 2rem; }
-  .cat-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 1.4rem;
-  }
+  .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.4rem; }
 
   /* Card */
   .cat-card {
@@ -158,8 +145,7 @@ const css = `
   .cat-card:hover {
     transform: translateY(-6px);
     box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(201,168,76,0.2);
-    border-color: rgba(201,168,76,0.3);
-    background: var(--card-hover);
+    border-color: rgba(201,168,76,0.3); background: var(--card-hover);
   }
   .cat-card.is-sold { opacity: 0.75; }
   .cat-card.is-sold:hover { transform: translateY(-3px); }
@@ -167,68 +153,45 @@ const css = `
   .cat-card-img { position: relative; height: 190px; background: var(--bg3); overflow: hidden; }
   .cat-card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
   .cat-card:hover .cat-card-img img { transform: scale(1.05); }
-  .cat-card-no-img {
-    width: 100%; height: 100%; display: flex;
-    align-items: center; justify-content: center; font-size: 3.5rem; opacity: 0.2;
-  }
+  .cat-card-no-img { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3.5rem; opacity: 0.2; }
 
-  /* Sold overlay */
-  .sold-ov {
-    position: absolute; inset: 0;
-    background: rgba(0,0,0,0.6);
-    display: flex; align-items: center; justify-content: center;
-  }
+  .sold-ov { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; }
   .sold-stamp {
     border: 3px solid var(--red); color: var(--red);
     padding: 0.25rem 1rem; border-radius: 4px;
     font-size: 1.6rem; font-weight: 900; letter-spacing: 6px;
-    font-family: 'Playfair Display', serif;
-    transform: rotate(-12deg);
+    font-family: 'Playfair Display', serif; transform: rotate(-12deg);
     text-shadow: 0 0 20px rgba(231,76,60,0.6);
     box-shadow: 0 0 20px rgba(231,76,60,0.2) inset;
   }
-
   .cat-card-badge {
     position: absolute; top: 10px; left: 10px;
     padding: 0.2rem 0.6rem; border-radius: 20px;
-    font-size: 0.68rem; font-weight: 600; letter-spacing: 0.05em;
-    z-index: 2; backdrop-filter: blur(8px);
+    font-size: 0.68rem; font-weight: 600; letter-spacing: 0.05em; z-index: 2;
   }
   .badge-ready { background: rgba(46,204,113,0.2); border: 1px solid rgba(46,204,113,0.4); color: var(--green); }
   .badge-sold { background: rgba(231,76,60,0.2); border: 1px solid rgba(231,76,60,0.4); color: var(--red); }
 
   .cat-card-body { padding: 1rem 1.1rem 1.2rem; }
-  .cat-card-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 1rem; font-weight: 600; color: var(--text);
-    margin: 0 0 0.3rem;
-  }
+  .cat-card-title { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 600; color: var(--text); margin: 0 0 0.3rem; }
   .cat-card-sub { font-size: 0.78rem; color: var(--text3); margin: 0.15rem 0; }
   .cat-card-divider { height: 1px; background: var(--border); margin: 0.7rem 0; }
-  .cat-card-price {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.05rem; font-weight: 700; color: var(--gold2);
-  }
-  .cat-card-price.sold-price { color: var(--text3); text-decoration: line-through; font-size: 0.9rem; }
+  .cat-card-price { font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 700; color: #f0cc72; letter-spacing: 0.01em; }
+  .cat-card-price.sold-price { color: var(--text3); text-decoration: line-through; font-size: 0.88rem; }
   .cat-card-media { font-size: 0.72rem; color: var(--text3); margin-top: 0.3rem; }
 
   /* Modal */
   .cat-overlay {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.85);
-    backdrop-filter: blur(8px);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 1000; padding: 1rem;
-    animation: fadeIn 0.2s ease;
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center;
+    z-index: 1000; padding: 1rem; animation: fadeIn 0.2s ease;
   }
   @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-
   .cat-modal {
     background: var(--bg2); border: 1px solid var(--border-light);
     border-radius: 20px; width: 100%; max-width: 580px;
     max-height: 90vh; overflow-y: auto; position: relative;
-    animation: slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1);
-    scrollbar-width: none;
+    animation: slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1); scrollbar-width: none;
   }
   .cat-modal::-webkit-scrollbar { display: none; }
   @keyframes slideUp { from { transform: translateY(30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
@@ -238,12 +201,10 @@ const css = `
     background: rgba(255,255,255,0.08); border: 1px solid var(--border);
     border-radius: 50%; width: 32px; height: 32px;
     color: var(--text2); font-size: 0.9rem; cursor: pointer; z-index: 20;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center; transition: all 0.15s;
   }
   .cat-modal-close:hover { background: rgba(255,255,255,0.15); color: var(--text); }
 
-  /* Slideshow */
   .cat-slides { position: relative; height: 300px; background: var(--bg); border-radius: 20px 20px 0 0; overflow: hidden; }
   .cat-slides img, .cat-slides video { width: 100%; height: 100%; object-fit: contain; }
   .cat-slide-btn {
@@ -251,8 +212,7 @@ const css = `
     background: rgba(0,0,0,0.6); border: 1px solid var(--border);
     color: white; border-radius: 50%; width: 38px; height: 38px;
     font-size: 1.2rem; cursor: pointer; z-index: 10;
-    display: flex; align-items: center; justify-content: center;
-    transition: background 0.15s;
+    display: flex; align-items: center; justify-content: center; transition: background 0.15s;
   }
   .cat-slide-btn:hover { background: rgba(201,168,76,0.3); border-color: var(--gold); }
   .cat-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
@@ -265,39 +225,23 @@ const css = `
   }
   .no-media { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text3); font-size: 1.1rem; }
 
-  /* Modal body */
   .cat-modal-body { padding: 1.4rem; }
   .cat-modal-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.2rem; }
-  .cat-modal-header h2 {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.4rem; margin: 0 0 0.3rem; color: var(--text);
-  }
+  .cat-modal-header h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; margin: 0 0 0.3rem; color: var(--text); }
   .cat-modal-header p { color: var(--text3); font-size: 0.85rem; margin: 0; }
-  .modal-status {
-    padding: 0.3rem 0.9rem; border-radius: 20px;
-    font-size: 0.78rem; font-weight: 600; white-space: nowrap; letter-spacing: 0.04em;
-  }
+  .modal-status { padding: 0.3rem 0.9rem; border-radius: 20px; font-size: 0.78rem; font-weight: 600; white-space: nowrap; letter-spacing: 0.04em; }
 
-  .cat-modal-specs {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 0.8rem; margin-bottom: 1.2rem;
-  }
-  .cat-spec {
-    background: var(--bg3); border: 1px solid var(--border);
-    border-radius: 10px; padding: 0.7rem 0.9rem;
-  }
+  .cat-modal-specs { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1.2rem; }
+  .cat-spec { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 0.9rem; }
   .cat-spec-lbl { font-size: 0.68rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.2rem; }
   .cat-spec-val { font-size: 0.9rem; font-weight: 500; color: var(--text); }
-  .cat-spec-val.price-val {
-    font-family: 'Playfair Display', serif;
-    font-size: 1rem; color: var(--gold2);
-  }
+  .cat-spec-val.price-val { font-family: 'DM Sans', sans-serif; font-size: 1.05rem; font-weight: 700; color: #f5f5f5; letter-spacing: 0.01em; }
+  .cat-spec-val.sold-price { color: var(--text3); text-decoration: line-through; }
 
   .cat-desc { margin-bottom: 1.2rem; }
   .cat-desc-lbl { font-size: 0.68rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.4rem; }
   .cat-desc p { color: var(--text2); font-size: 0.88rem; line-height: 1.7; margin: 0; }
 
-  /* WA button */
   .wa-btn {
     width: 100%; padding: 1rem;
     background: linear-gradient(135deg, #1fad57, #128c7e);
@@ -327,7 +271,9 @@ const css = `
   .empty-state div { font-size: 3rem; margin-bottom: 1rem; opacity: 0.3; }
 
   @media (max-width: 768px) {
-    .cat-nav { padding: 0 1rem; }
+    .cat-nav { padding: 0 1rem; height: 68px; }
+    .cat-nav-brand img { height: 40px; }
+    .cat-nav-brand span { display: none; }
     .cat-hero { padding: 2rem 1rem 1.5rem; }
     .cat-toolbar { padding: 1rem; }
     .cat-content { padding: 1rem; }
@@ -335,12 +281,14 @@ const css = `
     .cat-card-img { height: 130px; }
     .cat-modal-specs { grid-template-columns: 1fr; }
     .cat-slides { height: 220px; }
-    .cat-search { width: 100%; }
-    .cat-nav-brand span { display: none; }
+    .cat-search { width: 160px; }
+    .cat-search-wrap { margin-left: 0; }
   }
   @media (max-width: 480px) {
     .cat-grid { grid-template-columns: repeat(2, 1fr); }
     .cat-toolbar { flex-direction: column; align-items: stretch; }
+    .cat-search-wrap { margin-left: 0; }
+    .cat-search { width: 100%; }
   }
 `
 
@@ -353,12 +301,19 @@ if (typeof document !== 'undefined') {
     }
 }
 
+const WA_ICON = (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+)
+
 const Catalog = () => {
     const [cars, setCars] = useState([])
     const [summary, setSummary] = useState({ total: 0, ready: 0, sold: 0 })
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('')
     const [search, setSearch] = useState('')
+    const [budgetFilter, setBudgetFilter] = useState('')
     const [selected, setSelected] = useState(null)
     const [slideIdx, setSlideIdx] = useState(0)
     const [wsOn, setWsOn] = useState(false)
@@ -402,16 +357,29 @@ const Catalog = () => {
         const pesan = isSimilar
             ? `Halo kak, mobil *${car.brand} ${car.model} ${car.year}* sudah terjual. Apakah ada mobil serupa yang tersedia? Terima kasih`
             : `Halo kak ZafkaCars!\n\nSaya tertarik dengan mobil ini:\n\n*${car.brand} ${car.model}*\nTipe: ${car.type}\nTransmisi: ${car.transmisi}\nTahun: ${car.year}\nWarna: ${car.color}\nHarga: ${harga}${car.plateNumber ? `\nPlat: ${car.plateNumber}` : ''}\n\nApakah masih tersedia? Saya ingin info lebih lanjut, terima kasih!`
-
-        const url = `https://wa.me/${NOMOR_WA}?text=${encodeURIComponent(pesan)}`
-        window.open(url, '_blank')
+        window.open(`https://wa.me/${NOMOR_WA}?text=${encodeURIComponent(pesan)}`, '_blank')
     }
 
     const filtered = cars.filter(car => {
         const q = search.toLowerCase()
-        return car.brand.toLowerCase().includes(q) || car.model.toLowerCase().includes(q) ||
-            car.type.toLowerCase().includes(q) || car.color.toLowerCase().includes(q) ||
+        const matchSearch = (
+            car.brand.toLowerCase().includes(q) ||
+            car.model.toLowerCase().includes(q) ||
+            car.type.toLowerCase().includes(q) ||
+            car.color.toLowerCase().includes(q) ||
             (car.plateNumber?.toLowerCase().includes(q))
+        )
+        let matchBudget = true
+        if (budgetFilter) {
+            const p = car.price
+            if (budgetFilter === '0-50') matchBudget = p < 50_000_000
+            else if (budgetFilter === '50-100') matchBudget = p >= 50_000_000 && p < 100_000_000
+            else if (budgetFilter === '100-200') matchBudget = p >= 100_000_000 && p < 200_000_000
+            else if (budgetFilter === '200-350') matchBudget = p >= 200_000_000 && p < 350_000_000
+            else if (budgetFilter === '350-500') matchBudget = p >= 350_000_000 && p < 500_000_000
+            else if (budgetFilter === '500+') matchBudget = p >= 500_000_000
+        }
+        return matchSearch && matchBudget
     })
 
     return (
@@ -419,14 +387,12 @@ const Catalog = () => {
             {/* Navbar */}
             <nav className="cat-nav">
                 <div className="cat-nav-brand">
-                    <img src="/logo2.png" alt="ZafkaCars" style={{ height: '100px', borderRadius: '8px' }} />
-                    {/* <span>ZafkaCars</span> */}
+                    <img src="/logo2.png" alt="ZafkaCars" />
+                    <span>ZafkaCars</span>
                 </div>
-                <div className="cat-nav-right">
-                    <div className="ws-pill">
-                        <div className={`ws-dot ${wsOn ? 'on' : 'off'}`} />
-                        {wsOn ? 'Live' : 'Connecting...'}
-                    </div>
+                <div className="ws-pill">
+                    <div className={`ws-dot ${wsOn ? 'on' : 'off'}`} />
+                    {wsOn ? 'Live' : 'Connecting...'}
                 </div>
             </nav>
 
@@ -464,6 +430,20 @@ const Catalog = () => {
                         </button>
                     ))}
                 </div>
+
+                <select
+                    className={`cat-budget-select ${budgetFilter ? 'active' : ''}`}
+                    value={budgetFilter}
+                    onChange={e => setBudgetFilter(e.target.value)}>
+                    <option value="">💰 Semua Harga</option>
+                    <option value="0-50">Di bawah 50 juta</option>
+                    <option value="50-100">50 - 100 juta</option>
+                    <option value="100-200">100 - 200 juta</option>
+                    <option value="200-350">200 - 350 juta</option>
+                    <option value="350-500">350 - 500 juta</option>
+                    <option value="500+">Di atas 500 juta</option>
+                </select>
+
                 <div className="cat-search-wrap">
                     <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                         <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
@@ -490,7 +470,10 @@ const Catalog = () => {
                             return (
                                 <div key={car.id} className={`cat-card ${sold ? 'is-sold' : ''}`} onClick={() => openDetail(car)}>
                                     <div className="cat-card-img">
-                                        {img ? <img src={`${BASE_URL}${img.url}`} alt={car.model} /> : <div className="cat-card-no-img">🚗</div>}
+                                        {img
+                                            ? <img src={`${BASE_URL}${img.url}`} alt={car.model} />
+                                            : <div className="cat-card-no-img">🚗</div>
+                                        }
                                         {sold && <div className="sold-ov"><div className="sold-stamp">SOLD</div></div>}
                                         <span className={`cat-card-badge ${sold ? 'badge-sold' : 'badge-ready'}`}>
                                             {sold ? 'Terjual' : 'Tersedia'}
@@ -506,7 +489,8 @@ const Catalog = () => {
                                         </p>
                                         {car.media?.length > 0 && (
                                             <p className="cat-card-media">
-                                                📷 {car.media.filter(m => m.type === 'image').length} &nbsp; 🎥 {car.media.filter(m => m.type === 'video').length}
+                                                📷 {car.media.filter(m => m.type === 'image').length} &nbsp;
+                                                🎥 {car.media.filter(m => m.type === 'video').length}
                                             </p>
                                         )}
                                     </div>
@@ -541,12 +525,15 @@ const Catalog = () => {
                                     )}
                                     <div className="cat-dots">
                                         {selected.media.map((_, i) => (
-                                            <div key={i} className={`cat-dot ${i === slideIdx ? 'active' : ''}`} onClick={() => setSlideIdx(i)} />
+                                            <div key={i} className={`cat-dot ${i === slideIdx ? 'active' : ''}`}
+                                                onClick={() => setSlideIdx(i)} />
                                         ))}
                                     </div>
                                     <div className="cat-counter">{slideIdx + 1} / {selected.media.length}</div>
                                 </>
-                            ) : <div className="no-media">🚗 Tidak ada foto</div>}
+                            ) : (
+                                <div className="no-media">🚗 Tidak ada foto</div>
+                            )}
                         </div>
 
                         <div className="cat-modal-body">
@@ -596,15 +583,13 @@ const Catalog = () => {
 
                             {selected.status === 'READY' ? (
                                 <button className="wa-btn" onClick={() => handleWA(selected)}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
-                                    Hubungi via WhatsApp
+                                    {WA_ICON} Hubungi via WhatsApp
                                 </button>
                             ) : (
                                 <>
                                     <div className="sold-notice">😔 Mobil ini sudah terjual</div>
                                     <button className="wa-btn-alt" onClick={() => handleWA(selected, true)}>
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
-                                        Tanya Mobil Serupa
+                                        {WA_ICON} Tanya Mobil Serupa
                                     </button>
                                 </>
                             )}
