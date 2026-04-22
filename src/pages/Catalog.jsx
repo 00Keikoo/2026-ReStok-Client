@@ -345,6 +345,7 @@ const Catalog = () => {
     const [filter, setFilter] = useState('')
     const [search, setSearch] = useState('')
     const [budgetFilter, setBudgetFilter] = useState('')
+    const [brandFilter, setBrandFilter] = useState('')
     const [selected, setSelected] = useState(null)
     const [slideIdx, setSlideIdx] = useState(0)
     const [lightbox, setLightbox] = useState(null) // url foto yang sedang dibuka
@@ -411,7 +412,11 @@ const Catalog = () => {
             else if (budgetFilter === '350-500') matchBudget = p >= 350_000_000 && p < 500_000_000
             else if (budgetFilter === '500+') matchBudget = p >= 500_000_000
         }
-        return matchSearch && matchBudget
+        const matchBrand = brandFilter
+            ? car.brand.toLowerCase() === brandFilter.toLowerCase()
+            : true
+
+        return matchSearch && matchBudget && matchBrand
     })
 
     return (
@@ -462,6 +467,16 @@ const Catalog = () => {
                         </button>
                     ))}
                 </div>
+
+                <select
+                    className={`cat-budget-select ${brandFilter ? 'active' : ''}`}
+                    value={brandFilter}
+                    onChange={e => setBrandFilter(e.target.value)}>
+                    <option value="">🚗 Semua Brand</option>
+                    {[...new Set(cars.map(c => c.brand))].sort().map(brand => (
+                        <option key={brand} value={brand}>{brand}</option>
+                    ))}
+                </select>
 
                 <select
                     className={`cat-budget-select ${budgetFilter ? 'active' : ''}`}
