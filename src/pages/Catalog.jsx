@@ -93,6 +93,38 @@ const css = `
   .cat-stat-val { font-size: 1.6rem; font-weight: 700; font-family: 'Playfair Display', serif; }
   .cat-stat-lbl { font-size: 0.7rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.1rem; }
 
+    /* Lightbox */
+.lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2000; cursor: zoom-out; padding: 1rem;
+    animation: fadeIn 0.2s ease;
+}
+.lightbox img {
+    max-width: 100%; max-height: 90vh;
+    object-fit: contain; border-radius: 8px;
+    cursor: default;
+    animation: slideUp 0.2s ease;
+}
+.lightbox-close {
+    position: absolute; top: 1rem; right: 1rem;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 50%; width: 38px; height: 38px;
+    color: white; font-size: 1.1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+}
+.lightbox-close:hover { background: rgba(255,255,255,0.2); }
+.lightbox-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    color: white; border-radius: 50%; width: 44px; height: 44px;
+    font-size: 1.4rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+}
+.lightbox-nav:hover { background: rgba(201,168,76,0.3); border-color: var(--gold); }
+
   /* Toolbar */
   .cat-toolbar {
     padding: 1.2rem 2rem;
@@ -240,11 +272,10 @@ const css = `
 
   .cat-desc { margin-bottom: 1.2rem; }
   .cat-desc-lbl { font-size: 0.68rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.4rem; }
-  .cat-desc p { color: var(--text2); font-size: 0.88rem; line-height: 1.7; margin: 0; }
-
+.cat-desc p { color: var(--text2); font-size: 0.88rem; line-height: 1.7; margin: 0; white-space: pre-wrap; }
   .wa-btn {
     width: 100%; padding: 1rem;
-    background: linear-gradient(135deg, #1fad57, #128c7e);
+    background: linear-gradient(135deg, #1fad57, #128c7e);f
     border: none; border-radius: 12px; color: white;
     font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600;
     cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.6rem;
@@ -316,6 +347,7 @@ const Catalog = () => {
     const [budgetFilter, setBudgetFilter] = useState('')
     const [selected, setSelected] = useState(null)
     const [slideIdx, setSlideIdx] = useState(0)
+    const [lightbox, setLightbox] = useState(null) // url foto yang sedang dibuka
     const [wsOn, setWsOn] = useState(false)
     const wsRef = useRef(null)
 
@@ -512,7 +544,11 @@ const Catalog = () => {
                                 <>
                                     {selected.media[slideIdx]?.type === 'video'
                                         ? <video src={`${BASE_URL}${selected.media[slideIdx].url}`} controls />
-                                        : <img src={`${BASE_URL}${selected.media[slideIdx]?.url}`} alt="" />
+                                        : <img
+                                            src={`${BASE_URL}${selected.media[slideIdx]?.url}`} alt=""
+                                            style={{ cursor: 'zoom-in' }}
+                                            onClick={(e) => { e.stopPropagation(); setLightbox(`${BASE_URL}${selected.media[slideIdx]?.url}`) }}
+                                        />
                                     }
                                     {selected.status === 'SOLD' && (
                                         <div className="sold-ov"><div className="sold-stamp">SOLD</div></div>
@@ -595,6 +631,13 @@ const Catalog = () => {
                             )}
                         </div>
                     </div>
+                </div>
+            )}
+            {/* Lightbox */}
+            {lightbox && (
+                <div className="lightbox" onClick={() => setLightbox(null)}>
+                    <button className="lightbox-close" onClick={() => setLightbox(null)}>✕</button>
+                    <img src={lightbox} alt="" onClick={e => e.stopPropagation()} />
                 </div>
             )}
         </div>
